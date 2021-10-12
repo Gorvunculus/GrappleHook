@@ -23,6 +23,7 @@ options = {
 /**
 * @typedef { object } Player
 * @property { Color } color
+* @property { Grapple } grapple
 * @property { Vector } pos
 * @property { Vector } velocity
 * @property { Vector } gravity
@@ -42,12 +43,14 @@ options = {
 /**
 * @type  { Player }
 */
-let player
+let player;
 
 /**
-* @type  { Grapple }
+* @type  { Grapple[] }
 */
-let grapple
+let grappleList;
+
+const grappleSpeed = 10;
 
 function update() {
     if (!ticks) {
@@ -57,6 +60,10 @@ function update() {
     PlayerInput();
 
     RenderPlayer();
+
+    TempRenderNode();
+
+    RenderGrapple();
 }
 
 function Start()
@@ -64,29 +71,50 @@ function Start()
     player = {
         color: "cyan",
         pos: vec(G.WIDTH * 0.5, G.HEIGHT * 0.5),
+        grapple: null,
         velocity: vec(0, 0),
         gravity: vec(0, 0.1),
-        launchSpeed: 5,
+        launchSpeed: 0.5,
         grappleSlowdown: 0.5,
     };
 
-    grapple = {
-        color: "green",
-        pos: vec(G.WIDTH * 0.5, G.HEIGHT * 0.5),
-        velocity: vec(0, 0),
-        speed: 5,
-    };
+    grappleList = []
 }
 
 function RenderPlayer()
 {
-    
     player.velocity.add(player.gravity);
 
     player.pos.add(player.velocity);
-    player.pos.wrap(0, G.WIDTH, 0, G.HEIGHT);
+    player.pos.clamp(0, G.WIDTH, 0, G.HEIGHT);
     color(player.color);
     box(player.pos.x, player.pos.y, 10);
+}
+
+function TempRenderNode()
+{
+    color("black");
+    rect(G.WIDTH * 0.4, 0, 10, G.HEIGHT);
+}
+
+function RenderGrapple()
+{
+    remove(grappleList, grapple => {
+        grapple.pos.add(grapple.velocity);
+
+        color(grapple.color);
+        line(player.pos.x, player.pos.y, grapple.pos.x, grapple.pos.y);
+        let collideNode = box(grapple.pos.x, grapple.pos.y, 5)
+            .isColliding.rect.black;
+        
+        if(collideNode)
+        {
+            LaunchPlayer(grapple.velocity);
+        }
+
+        return !grapple.pos.isInRect(0, 0, G.WIDTH, G.HEIGHT)
+            || collideNode;
+    })
 }
 
 function PlayerInput()
@@ -104,13 +132,22 @@ function PlayerInput()
 
 function ShootGrapple(inputDirection, inputLength)
 {
-    LaunchPlayer(inputDirection, inputLength);
+    let grappleVelocity = RescaleVector(inputDirection, grappleSpeed);
+    
+    let newGrapple = grappleList.push({
+        color: "light_green",
+        pos: vec(player.pos.x, player.pos.y),
+        velocity: grappleVelocity,
+        speed: grappleSpeed,
+    });
+
+    player.grapple = grappleList[newGrapple];
 }
 
-function LaunchPlayer(launchDirection, launchLength)
+function LaunchPlayer(launchDirection)
 {
     let launchVelocity = RescaleVector(launchDirection, 
-        launchLength * player.launchSpeed);
+        player.launchSpeed);
 
     player.velocity = RescaleVector(player.velocity, player.grappleSlowdown)
 
