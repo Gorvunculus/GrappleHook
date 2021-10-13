@@ -81,9 +81,9 @@ function Start()
         color: "cyan",
         pos: vec(G.WIDTH * 0.5, G.HEIGHT * 0.5),
         velocity: vec(0, 0),
-        gravity: vec(0, 0.1),
-        initialPropelSpeed: 0.01,
-        propelAccel: 0.0015,
+        gravity: vec(0, 0.07),
+        initialPropelSpeed: 0.02,
+        propelAccel: 0.001,
         grappleSlowdown: 0.5,
     };
 
