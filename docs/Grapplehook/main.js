@@ -27,7 +27,7 @@ options = {
 * @property { Vector } velocity
 * @property { Vector } gravity
 * @property { Number } initialPropelSpeed
-* @property { Number } propelSpeed
+* @property { Number } propelAccel
 * @property { Number } grappleSlowdown
 */
 
@@ -68,11 +68,11 @@ function update() {
 
     PlayerInput();
 
-    RenderPlayer();
-
     TempRenderNode();
 
     RenderGrapple();
+
+    RenderPlayer();
 }
 
 function Start()
@@ -83,7 +83,7 @@ function Start()
         velocity: vec(0, 0),
         gravity: vec(0, 0.1),
         initialPropelSpeed: 0.01,
-        propelSpeed: 0.001,
+        propelAccel: 0.0015,
         grappleSlowdown: 0.5,
     };
 
@@ -116,12 +116,7 @@ function RenderGrapple()
         line(player.pos.x, player.pos.y, grapple.pos.x, grapple.pos.y);
         let collideNode = box(grapple.pos.x, grapple.pos.y, 5)
             .isColliding.rect.black;
-
-        if(grapple.isStuck && !grapple.isReleased)
-        {
-            PropelPlayer(grapple.direction, player.propelSpeed, false);
-        }
-
+        
         if(!grapple.isStuck)
         {
             grapple.pos.add(grapple.velocity);
@@ -130,22 +125,29 @@ function RenderGrapple()
             {
                 PropelPlayer(grapple.direction, player.initialPropelSpeed, true);
                 grapple.isStuck = true;
-            } 
+            }
         }
         else
         {
-            let grappleLength = grapple.pos.distanceTo(player.pos);
-            if(grappleLength < releaseLength)
+            if(!grapple.isReleased)
             {
-                grapple.isReleased = true;
+                PropelPlayer(grapple.direction, player.propelAccel, false);
             }
+            TryReleaseGrapple(grapple);
         }
-
-        
 
         return !grapple.pos.isInRect(0, 0, G.WIDTH, G.HEIGHT)
             || grapple.isReleased;
     })
+}
+
+function TryReleaseGrapple(grapple)
+{
+    let grappleLength = grapple.pos.distanceTo(player.pos);
+    if(grappleLength < releaseLength)
+    {
+        grapple.isReleased = true;
+    }
 }
 
 function PlayerInput()
@@ -157,7 +159,7 @@ function PlayerInput()
         currInput.y - player.pos.y);
         let inputDirection = inputVector.normalize();
         
-        ShootGrapple(inputDirection, inputVector.length);
+        ShootGrapple(inputDirection);
     }
 
     if(input.isJustReleased && playerGrapple != null)
@@ -167,7 +169,7 @@ function PlayerInput()
     }
 }
 
-function ShootGrapple(inputDirection, inputLength)
+function ShootGrapple(inputDirection)
 {
     let grappleVelocity = RescaleVector(inputDirection, grappleSpeed);
     let newGrapple = grappleList.push({
