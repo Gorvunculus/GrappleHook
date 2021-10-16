@@ -1,7 +1,7 @@
 title = "Grapplehook";
 
 description = `
-Click to shoot a grapplehook
+Click to shoot a grappling hook. Avoid the edges!
 `;
 
 characters = [];
@@ -14,9 +14,9 @@ const G = {
 options = {
     viewSize: {x: G.WIDTH, y: G.HEIGHT},
     theme: "shape",
-    isReplayEnabled: true,
-    isPlayingBgm: false,
-    seed: 0,
+    isReplayEnabled: false,
+    isPlayingBgm: true,
+    seed: rnd(0,9999),
     isDrawingScoreFront: true,
 };
 
@@ -60,19 +60,27 @@ let playerGrapple;
 
 const grappleSpeed = 20;
 const releaseLength = 50;
+let nodeLife = 0;
+let posX
+let posY
+let xCoord = []
+let yCoord = []
 
 function update() {
     if (!ticks) {
         Start();
+        RandomizeNodes();
     }
 
     PlayerInput();
 
-    TempRenderNode();
+    GrappleNodes();
 
     RenderGrapple();
 
     RenderPlayer();
+
+    GameOver();
 }
 
 function Start()
@@ -100,10 +108,52 @@ function RenderPlayer()
     box(player.pos.x, player.pos.y, 10);
 }
 
-function TempRenderNode()
+function GameOver(){
+    let playerX = player.pos.x;
+    let playerY = player.pos.y;
+    if (playerY <= G.HEIGHT && playerX == 0){
+        end();
+    } 
+    else if (playerX <= G.WIDTH && playerY == 0){
+        end();
+    }
+    else if (playerY <= G.HEIGHT && playerX == G.WIDTH){
+        end();
+    }
+    else if (playerX <= G.WIDTH && playerY == G.HEIGHT){
+        end();
+    }
+}
+
+function GrappleNodes()
 {
-    color("black");
-    rect(G.WIDTH * 0.4, 0, 10, G.HEIGHT);
+    let nodeLifespan = 3000 / difficulty + 1;
+        if (nodeLife >= nodeLifespan) {
+            RandomizeNodes();
+            play("coin");
+        }
+        else {
+            for (let i = 0; i <= 11 - difficulty || (i > 0 && i < 1); i++) {
+                color("black");
+                rect(xCoord[i], yCoord[i], 20, 20);
+                nodeLife++
+            }
+        }
+}
+
+function RandomizeNodes()
+{
+    xCoord = []
+    yCoord = []
+    for (let i = 0; i <= 11 - difficulty || (i > 0 && i < 1); i++){
+        posX = G.WIDTH * rnd(0.1, 0.9);
+        xCoord.push(posX)
+        posY = G.WIDTH * rnd(0.1, 0.9);
+        yCoord.push(posY)
+        color("black");
+        rect(posX, posY, 20, 20)
+        nodeLife = 0;
+    }
 }
 
 function RenderGrapple()
@@ -125,6 +175,8 @@ function RenderGrapple()
             {
                 PropelPlayer(grapple.direction, player.initialPropelSpeed, true);
                 grapple.isStuck = true;
+                score += 10;
+                play("hit")
             }
         }
         else
