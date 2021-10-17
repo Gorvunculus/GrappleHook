@@ -58,6 +58,19 @@ options = {
 */
 
 /**
+* @typedef { object } GrappleNode
+* @property { Color } color
+* @property { Vector } pos
+* @property { Vector } velocity
+* @property { Number } size
+*/
+
+/**
+ * @type { GrappleNode []}
+ */
+let GrappleNodeArray = []
+
+/**
 * @type  { Player }
 */
 let player;
@@ -161,33 +174,47 @@ function RenderPlayer()
 
 function GrappleNodes()
 {
-    let nodeLifespan = 3000 / difficulty + 1;
-    if (nodeLife >= nodeLifespan) {
+
+    if (GrappleNodeArray.length <= 9) {
         RandomizeNodes();
-        play("coin");
     }
-    else {
-        for (let i = 0; i <= 11 - difficulty || (i > 0 && i < 1); i++) {
-            color("black");
-            rect(xCoord[i], yCoord[i], 20, 20);
-            nodeLife++
+    remove(GrappleNodeArray, element => {
+        if (player.velocity.y < 0){
+            element.velocity.y -= player.velocity.y;
+            if (element.velocity.y > 1.5){
+                element.velocity.y = 1.5
+            }
         }
-    }
+        element.pos.add(element.velocity);
+        color(element.color);
+        box(element.pos.x, element.pos.y, element.size);
+        if (element.pos.y == G.HEIGHT + G.EXTRABOUND){
+            return true;
+        }
+        else{
+            return false;
+        }
+    })
 }
 
 function RandomizeNodes()
 {
-    xCoord = []
-    yCoord = []
-    for (let i = 0; i <= 11 - difficulty || (i > 0 && i < 1); i++){
-        posX = G.WIDTH * rnd(0.1, 0.9);
-        xCoord.push(posX)
-        posY = G.WIDTH * rnd(0.1, 0.9);
-        yCoord.push(posY)
-        color("black");
-        rect(posX, posY, 20, 20)
-        nodeLife = 0;
-    }
+    GrappleNodeArray.push({
+        color: "black",
+        pos: vec(G.WIDTH * rnd(0.1, 0.9), -G.EXTRABOUND),
+        velocity: vec(0, ((player.velocity.y) + player.gravity.y * difficulty)),
+        size: 20
+    });
+}
+
+function startNodes()
+{
+    GrappleNodeArray.push({
+        color: "black",
+        pos: vec(G.WIDTH * rnd(0.1, 0.9), 0.1),
+        velocity: vec(0, ((player.velocity.y) + player.gravity.y * difficulty)),
+        size: 20
+    });
 }
 
 function RenderGrapple()
