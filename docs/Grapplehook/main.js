@@ -16,7 +16,7 @@ options = {
     viewSize: {x: G.WIDTH, y: G.HEIGHT},
     theme: "shape",
     isReplayEnabled: false,
-    // isPlayingBgm: true,
+    isPlayingBgm: true,
     seed: 7,
     isDrawingScoreFront: true,
     isDrawingParticleFront: true,
@@ -127,8 +127,8 @@ function Start()
         velocity: vec(0, 0),
         gravity: vec(0, 0.09),
         size: 10,
-        initialPropelSpeed: 0.03,
-        propelAccel: 0.0001,
+        initialPropelSpeed: 0.05,
+        propelAccel: 0.00005,
         grappleSlowdown: 0.5,
     };
 
@@ -154,13 +154,13 @@ function RenderBackgroundObject(array)
 }
 
 function SpawnRocks() {
-    times(20, () => {
+    times(30, () => {
         rockArray.push({
             color: "light_black",
             pos: vec(rnd(0, G.WIDTH),
                 rnd(0, G.HEIGHT)),
             velocity: vec(0, 0),
-            size: 5,
+            size: 10,
         });
     });
 }
@@ -201,9 +201,9 @@ function GrappleNodes()
     }
     remove(GrappleNodeArray, element => {
         if (player.velocity.y < 0){
-            element.velocity.y -= player.velocity.y;
-            if (element.velocity.y > 3){
-                element.velocity.y = 3
+            element.velocity.y -= player.velocity.y/5;
+            if (element.velocity.y > 2){
+                element.velocity.y = 2
             }
         }
         element.pos.add(element.velocity);
@@ -232,7 +232,7 @@ function RandomizeNodes()
         color: "black",
         pos: vec(G.WIDTH * rnd(0.1, 0.9), -G.EXTRABOUND),
         velocity: vec(0, ((player.velocity.y) + player.gravity.y * difficulty)),
-        size: 20
+        size: 30
     });
 }
 
@@ -243,7 +243,7 @@ function startNodes()
             color: "black",
             pos: vec(G.WIDTH * rnd(0.1, 0.9), G.HEIGHT * GrappleNodeArray.length * 0.1),
             velocity: vec(0, 1),
-            size: 20
+            size: 30
         });
     });
     
