@@ -9,6 +9,7 @@ characters = [];
 const G = {
     WIDTH: 400,
     HEIGHT: 400,
+    EXTRABOUND: 50,
 };
 
 options = {
@@ -41,10 +42,19 @@ options = {
 * @property { Vector } direction
 * @property { Vector } velocity
 * @property { Number } size
+* @property { Number } radius
 * @property { Number } speed
 * @property { Number } releaseLength
 * @property { Boolean } isStuck
 * @property { Boolean } isReleased
+*/
+
+/**
+* @typedef { object } BackgroundObject
+* @property { Color } color
+* @property { Vector } pos
+* @property { Vector } velocity
+* @property { Number } size
 */
 
 /**
@@ -55,12 +65,17 @@ let player;
 /**
 * @type  { Grapple[] }
 */
-let grappleList;
+let grappleList = [];
 
 /**
 * @type  { Grapple }
 */
 let playerGrapple;
+
+/**
+* @type  { BackgroundObject[] }
+*/
+let rockArray = [];
 
 const grappleSpeed = 12;
 const releaseLength = 0;
@@ -75,6 +90,8 @@ function update() {
         Start();
         RandomizeNodes();
     }
+
+    RenderBackground();
 
     PlayerInput();
 
@@ -100,7 +117,37 @@ function Start()
         grappleSlowdown: 0.5,
     };
 
-    grappleList = []
+    SpawnRocks();
+}
+
+function RenderBackground()
+{
+    color("light_green");
+    rect(0, 0, G.WIDTH, G.HEIGHT);
+
+    RenderBackgroundObject(rockArray);
+}
+
+function RenderBackgroundObject(array)
+{
+    array.forEach(item => {
+        item.pos.add(item.velocity);
+        item.pos.wrap(0, G.WIDTH, 0, G.HEIGHT);
+        color(item.color);
+        box(item.pos.x, item.pos.y, item.size);
+    });
+}
+
+function SpawnRocks() {
+    times(20, () => {
+        rockArray.push({
+            color: "light_black",
+            pos: vec(rnd(0, G.WIDTH),
+                rnd(0, G.HEIGHT)),
+            velocity: vec(0, 0),
+            size: 5,
+        });
+    });
 }
 
 function RenderPlayer()
@@ -154,7 +201,7 @@ function RenderGrapple()
         
         let grappleAngle = atan2(grapple.velocity.y, grapple.velocity.x);
         color(grapple.color);
-        let collideNode = arc(grapple.pos.x, grapple.pos.y, 6, 5,
+        let collideNode = arc(grapple.pos.x, grapple.pos.y, grapple.radius, grapple.size,
             grappleAngle - PI/3, grappleAngle + PI/3).isColliding.rect.black;
         
         if(!grapple.isStuck)
@@ -222,11 +269,12 @@ function ShootGrapple(inputDirection)
     let grappleVelocity = inputDirection.mul(grappleSpeed);
     let newGrapple = grappleList.push({
         color: "purple",
-        lineColor: "light_green",
+        lineColor: "light_yellow",
         pos: vec(player.pos.x, player.pos.y),
         velocity: grappleVelocity,
         direction: inputDirection,
         size: 5,
+        radius: 6,
         speed: grappleSpeed,
         releaseLength: releaseLength,
         isReleased: false,
@@ -250,16 +298,15 @@ function PropelPlayer(direction, speed, isInitial)
     let particleAngle = atan2(player.velocity.y, player.velocity.x) + PI;
     color(player.color);
     particle(player.pos.x + randX, player.pos.y + randY,
-        1, 3, particleAngle, PI/6);
+        1, player.velocity.length, particleAngle, PI/6);
 
     player.velocity.add(velocity);
 }
 
 function GameOver(){
-    let extra = 50;
     // if(!player.pos.isInRect(-extra, -extra,
     //     G.WIDTH + extra, G.HEIGHT + extra))
-    if(player.pos.y > G.HEIGHT + extra)
+    if(player.pos.y > G.HEIGHT + G.EXTRABOUND)
     {
         play("lucky");
         end();
