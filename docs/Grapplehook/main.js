@@ -16,7 +16,7 @@ options = {
     viewSize: {x: G.WIDTH, y: G.HEIGHT},
     theme: "shape",
     isReplayEnabled: false,
-    isPlayingBgm: true,
+    // isPlayingBgm: true,
     seed: 7,
     isDrawingScoreFront: true,
     isDrawingParticleFront: true,
@@ -92,40 +92,47 @@ let rockArray = [];
 
 const grappleSpeed = 12;
 const releaseLength = 0;
+let nodeLife = 0;
+let posX
+let posY
+let xCoord = []
+let yCoord = []
+
+let nodeSpeedMult = 0;
 
 function update() {
     if (!ticks) {
         Start();
+        RandomizeNodes();
     }
 
     RenderBackground();
 
     PlayerInput();
+    RenderPlayer();
 
     GrappleNodes();
 
     RenderGrapple();
-
-    RenderPlayer();
 
     GameOver();
 }
 
 function Start()
 {
+    startNodes();
     player = {
         color: "cyan",
         pos: vec(G.WIDTH * 0.5, G.HEIGHT * 0.5),
         velocity: vec(0, 0),
-        gravity: vec(0, 0.07),
+        gravity: vec(0, 0.09),
         size: 10,
-        initialPropelSpeed: 0.02,
-        propelAccel: 0.001,
+        initialPropelSpeed: 0.03,
+        propelAccel: 0.0001,
         grappleSlowdown: 0.5,
     };
 
     SpawnRocks();
-    GrappleNodes();
 }
 
 function RenderBackground()
@@ -162,32 +169,54 @@ function RenderPlayer()
 {
     player.velocity.add(player.gravity);
 
+    player.pos.clamp(10, G.WIDTH - 10, 10, G.HEIGHT + 1000);
+
     player.pos.add(player.velocity);
     color(player.color);
     box(player.pos.x, player.pos.y, player.size);
+
+    let percentHeight = player.pos.y/G.HEIGHT;
+    percentHeight = Math.min(0, percentHeight);
+
+    player.gravity = vec(0, 0.1)
+
+    if(player.velocity.y < 0)
+    {
+        player.gravity.y += -player.velocity.y/100;
+    }
+    let percentToTop = 1-(player.pos.y/G.HEIGHT) + 0.5;
+    player.gravity.mul(percentToTop);
+
+    if(playerGrapple != null)
+    {
+        color("purple");
+        box(playerGrapple.pos.x, playerGrapple.pos.y, 10, 10);
+    }
 }
 
 function GrappleNodes()
 {
-    if(!ticks){
-        for (let i = 0; i < 10; i++){
-            startNodes();
-        }
-    } else if (GrappleNodeArray.length <= 9) {
+    if (GrappleNodeArray.length <= 10) {
         RandomizeNodes();
     }
     remove(GrappleNodeArray, element => {
         if (player.velocity.y < 0){
-            element.velocity.y += player.velocity.y;
-        }
-        if (player.velocity.y > 0){
             element.velocity.y -= player.velocity.y;
+            if (element.velocity.y > 3){
+                element.velocity.y = 3
+            }
         }
-        element.velocity.clamp(0,0,-player.velocity.y - 2, player.velocity.y + 5)
-
         element.pos.add(element.velocity);
+
         color(element.color);
-        box(element.pos.x, element.pos.y, element.size);
+        let collidingGrapple = box(element.pos.x, element.pos.y, element.size).
+            isColliding.rect.purple;
+
+        if(collidingGrapple)
+        {
+            playerGrapple.pos = element.pos;
+        }
+
         if (element.pos.y >= G.HEIGHT + G.EXTRABOUND){
             return true;
         }
@@ -209,12 +238,15 @@ function RandomizeNodes()
 
 function startNodes()
 {
-    GrappleNodeArray.push({
-        color: "black",
-        pos: vec(G.WIDTH * rnd(0.1, 0.9), GrappleNodeArray.length / 10 + 0.1),
-        velocity: vec(0, ((player.velocity.y) + player.gravity.y * difficulty)),
-        size: 20
+    times(10, () => {
+        GrappleNodeArray.push({
+            color: "black",
+            pos: vec(G.WIDTH * rnd(0.1, 0.9), G.HEIGHT * rnd(0.1, 0.9)),
+            velocity: vec(0, 0),
+            size: 20
+        });
     });
+    
 }
 
 function RenderGrapple()
@@ -253,7 +285,7 @@ function RenderGrapple()
             {
                 PropelPlayer(grapple.direction, player.propelAccel, false);
             }
-            TryReleaseGrapple(grapple);
+            // TryReleaseGrapple(grapple);
         }
 
         //  !grapple.pos.isInRect(0, 0, G.WIDTH, G.HEIGHT)
@@ -301,7 +333,7 @@ function ShootGrapple(inputDirection)
         velocity: grappleVelocity,
         direction: inputDirection,
         size: 5,
-        radius: 6,
+        radius: 4,
         speed: grappleSpeed,
         releaseLength: releaseLength,
         isReleased: false,
