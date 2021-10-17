@@ -8,7 +8,7 @@ characters = [];
 
 const G = {
     WIDTH: 400,
-    HEIGHT: 400,
+    HEIGHT: 800,
     EXTRABOUND: 50,
 };
 
@@ -241,8 +241,8 @@ function startNodes()
     times(10, () => {
         GrappleNodeArray.push({
             color: "black",
-            pos: vec(G.WIDTH * rnd(0.1, 0.9), G.HEIGHT * rnd(0.1, 0.9)),
-            velocity: vec(0, 0),
+            pos: vec(G.WIDTH * rnd(0.1, 0.9), G.HEIGHT * GrappleNodeArray.length * 0.1),
+            velocity: vec(0, 1),
             size: 20
         });
     });
