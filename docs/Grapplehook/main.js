@@ -92,16 +92,10 @@ let rockArray = [];
 
 const grappleSpeed = 12;
 const releaseLength = 0;
-let nodeLife = 0;
-let posX
-let posY
-let xCoord = []
-let yCoord = []
 
 function update() {
     if (!ticks) {
         Start();
-        RandomizeNodes();
     }
 
     RenderBackground();
@@ -131,6 +125,7 @@ function Start()
     };
 
     SpawnRocks();
+    GrappleNodes();
 }
 
 function RenderBackground()
@@ -174,21 +169,26 @@ function RenderPlayer()
 
 function GrappleNodes()
 {
-
-    if (GrappleNodeArray.length <= 9) {
+    if(!ticks){
+        for (let i = 0; i < 10; i++){
+            startNodes();
+        }
+    } else if (GrappleNodeArray.length <= 9) {
         RandomizeNodes();
     }
     remove(GrappleNodeArray, element => {
         if (player.velocity.y < 0){
-            element.velocity.y -= player.velocity.y;
-            if (element.velocity.y > 1.5){
-                element.velocity.y = 1.5
-            }
+            element.velocity.y += player.velocity.y;
         }
+        if (player.velocity.y > 0){
+            element.velocity.y -= player.velocity.y;
+        }
+        element.velocity.clamp(0,0,-player.velocity.y - 2, player.velocity.y + 5)
+
         element.pos.add(element.velocity);
         color(element.color);
         box(element.pos.x, element.pos.y, element.size);
-        if (element.pos.y == G.HEIGHT + G.EXTRABOUND){
+        if (element.pos.y >= G.HEIGHT + G.EXTRABOUND){
             return true;
         }
         else{
@@ -211,7 +211,7 @@ function startNodes()
 {
     GrappleNodeArray.push({
         color: "black",
-        pos: vec(G.WIDTH * rnd(0.1, 0.9), 0.1),
+        pos: vec(G.WIDTH * rnd(0.1, 0.9), GrappleNodeArray.length / 10 + 0.1),
         velocity: vec(0, ((player.velocity.y) + player.gravity.y * difficulty)),
         size: 20
     });
