@@ -1,7 +1,7 @@
 title = "Grapplehook";
 
 description = `
-Click to shoot a grappling hook. Avoid the edges!
+Click and hold to shoot a grappling hook. Don't fall!
 `;
 
 characters = [];
@@ -16,8 +16,9 @@ options = {
     theme: "shape",
     isReplayEnabled: false,
     isPlayingBgm: true,
-    seed: rnd(0,9999),
+    seed: 7,
     isDrawingScoreFront: true,
+    isDrawingParticleFront: true,
 };
 
 /**
@@ -26,6 +27,7 @@ options = {
 * @property { Vector } pos
 * @property { Vector } velocity
 * @property { Vector } gravity
+* @property { Number } size
 * @property { Number } initialPropelSpeed
 * @property { Number } propelAccel
 * @property { Number } grappleSlowdown
@@ -34,9 +36,11 @@ options = {
 /**
 * @typedef { object } Grapple
 * @property { Color } color
+* @property { Color } lineColor
 * @property { Vector } pos
 * @property { Vector } direction
 * @property { Vector } velocity
+* @property { Number } size
 * @property { Number } speed
 * @property { Number } releaseLength
 * @property { Boolean } isStuck
@@ -58,8 +62,8 @@ let grappleList;
 */
 let playerGrapple;
 
-const grappleSpeed = 20;
-const releaseLength = 50;
+const grappleSpeed = 12;
+const releaseLength = 0;
 let nodeLife = 0;
 let posX
 let posY
@@ -90,6 +94,7 @@ function Start()
         pos: vec(G.WIDTH * 0.5, G.HEIGHT * 0.5),
         velocity: vec(0, 0),
         gravity: vec(0, 0.07),
+        size: 10,
         initialPropelSpeed: 0.02,
         propelAccel: 0.001,
         grappleSlowdown: 0.5,
@@ -103,42 +108,24 @@ function RenderPlayer()
     player.velocity.add(player.gravity);
 
     player.pos.add(player.velocity);
-    player.pos.clamp(0, G.WIDTH, 0, G.HEIGHT);
     color(player.color);
-    box(player.pos.x, player.pos.y, 10);
-}
-
-function GameOver(){
-    let playerX = player.pos.x;
-    let playerY = player.pos.y;
-    if (playerY <= G.HEIGHT && playerX == 0){
-        end();
-    } 
-    else if (playerX <= G.WIDTH && playerY == 0){
-        end();
-    }
-    else if (playerY <= G.HEIGHT && playerX == G.WIDTH){
-        end();
-    }
-    else if (playerX <= G.WIDTH && playerY == G.HEIGHT){
-        end();
-    }
+    box(player.pos.x, player.pos.y, player.size);
 }
 
 function GrappleNodes()
 {
     let nodeLifespan = 3000 / difficulty + 1;
-        if (nodeLife >= nodeLifespan) {
-            RandomizeNodes();
-            play("coin");
+    if (nodeLife >= nodeLifespan) {
+        RandomizeNodes();
+        play("coin");
+    }
+    else {
+        for (let i = 0; i <= 11 - difficulty || (i > 0 && i < 1); i++) {
+            color("black");
+            rect(xCoord[i], yCoord[i], 20, 20);
+            nodeLife++
         }
-        else {
-            for (let i = 0; i <= 11 - difficulty || (i > 0 && i < 1); i++) {
-                color("black");
-                rect(xCoord[i], yCoord[i], 20, 20);
-                nodeLife++
-            }
-        }
+    }
 }
 
 function RandomizeNodes()
@@ -162,10 +149,13 @@ function RenderGrapple()
         grapple.direction = vec(grapple.pos.x - player.pos.x,
             grapple.pos.y - player.pos.y);
 
+        color(grapple.lineColor);
+        line(player.pos.x, player.pos.y, grapple.pos.x, grapple.pos.y, 3);
+        
+        let grappleAngle = atan2(grapple.velocity.y, grapple.velocity.x);
         color(grapple.color);
-        line(player.pos.x, player.pos.y, grapple.pos.x, grapple.pos.y);
-        let collideNode = box(grapple.pos.x, grapple.pos.y, 5)
-            .isColliding.rect.black;
+        let collideNode = arc(grapple.pos.x, grapple.pos.y, 6, 5,
+            grappleAngle - PI/3, grappleAngle + PI/3).isColliding.rect.black;
         
         if(!grapple.isStuck)
         {
@@ -176,7 +166,11 @@ function RenderGrapple()
                 PropelPlayer(grapple.direction, player.initialPropelSpeed, true);
                 grapple.isStuck = true;
                 score += 10;
-                play("hit")
+                play("laser")
+
+                color("yellow");
+                particle(grapple.pos.x, grapple.pos.y,
+                    20, 1, 0, 2*PI);
             }
         }
         else
@@ -188,8 +182,8 @@ function RenderGrapple()
             TryReleaseGrapple(grapple);
         }
 
-        return !grapple.pos.isInRect(0, 0, G.WIDTH, G.HEIGHT)
-            || grapple.isReleased;
+        //  !grapple.pos.isInRect(0, 0, G.WIDTH, G.HEIGHT)
+        return grapple.isReleased;
     })
 }
 
@@ -212,6 +206,8 @@ function PlayerInput()
         let inputDirection = inputVector.normalize();
         
         ShootGrapple(inputDirection);
+
+        play("hit");
     }
 
     if(input.isJustReleased && playerGrapple != null)
@@ -223,12 +219,14 @@ function PlayerInput()
 
 function ShootGrapple(inputDirection)
 {
-    let grappleVelocity = RescaleVector(inputDirection, grappleSpeed);
+    let grappleVelocity = inputDirection.mul(grappleSpeed);
     let newGrapple = grappleList.push({
-        color: "light_green",
+        color: "purple",
+        lineColor: "light_green",
         pos: vec(player.pos.x, player.pos.y),
         velocity: grappleVelocity,
         direction: inputDirection,
+        size: 5,
         speed: grappleSpeed,
         releaseLength: releaseLength,
         isReleased: false,
@@ -240,17 +238,30 @@ function ShootGrapple(inputDirection)
 
 function PropelPlayer(direction, speed, isInitial)
 {
-    let velocity = RescaleVector(direction, speed);
+    let velocity = direction.mul(speed);
 
     if(isInitial)
     {
-        player.velocity = RescaleVector(player.velocity, player.grappleSlowdown)
+        player.velocity = player.velocity.mul(player.grappleSlowdown);
     }
+
+    let randX = rndi(-player.size/4, player.size/4);
+    let randY = rndi(-player.size/4, player.size/4);
+    let particleAngle = atan2(player.velocity.y, player.velocity.x) + PI;
+    color(player.color);
+    particle(player.pos.x + randX, player.pos.y + randY,
+        1, 3, particleAngle, PI/6);
 
     player.velocity.add(velocity);
 }
 
-function RescaleVector(toScale, multiplier)
-{
-    return vec(toScale.x * multiplier, toScale.y * multiplier);
+function GameOver(){
+    let extra = 50;
+    // if(!player.pos.isInRect(-extra, -extra,
+    //     G.WIDTH + extra, G.HEIGHT + extra))
+    if(player.pos.y > G.HEIGHT + extra)
+    {
+        play("lucky");
+        end();
+    }
 }
